@@ -1,0 +1,4 @@
+timezone: "Europe/Moscow"
+docker_version: "24.0"
+nginx_port: 80
+postgres_version: "15"

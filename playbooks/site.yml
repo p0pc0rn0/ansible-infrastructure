@@ -1,0 +1,9 @@
+---
+- name: Configure full infrastructure
+  hosts: all
+  become: true
+  roles:
+    - docker
+    - nginx
+    - postgres
+    - monitoring

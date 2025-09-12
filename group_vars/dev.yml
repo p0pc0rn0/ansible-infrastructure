@@ -1,0 +1,4 @@
+nginx_port: 8080
+postgres_db: dev_db
+postgres_user: dev_user
+postgres_password: dev_pass
