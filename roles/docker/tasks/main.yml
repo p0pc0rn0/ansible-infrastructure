@@ -1,0 +1,78 @@
+---
+# Установка зависимостей
+- name: Install required packages
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: yes
+
+# Добавление GPG-ключа Docker
+- name: Add Docker GPG apt Key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+# Добавление репозитория Docker
+- name: Add Docker Repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+    state: present
+
+# Установка Docker Engine
+- name: Install Docker Engine
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+    update_cache: yes
+
+# Включение и запуск systemd-сервиса
+- name: Enable and start Docker service
+  systemd:
+    name: docker
+    enabled: true
+    state: started
+
+# Установка Docker Compose (последняя версия)
+- name: Get latest Docker Compose version
+  uri:
+    url: https://api.github.com/repos/docker/compose/releases/latest
+    return_content: yes
+  register: compose_release
+
+- name: Set docker-compose version fact
+  set_fact:
+    docker_compose_version: "{{ compose_release.json.tag_name }}"
+
+- name: Download Docker Compose binary
+  get_url:
+    url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-{{ ansible_system | lower }}-{{ ansible_architecture }}"
+    dest: /usr/local/bin/docker-compose
+    mode: '0755'
+
+# Проверка версии Docker
+- name: Check Docker version
+  command: docker --version
+  register: docker_version
+  changed_when: false
+
+- name: Print Docker version
+  debug:
+    msg: "{{ docker_version.stdout }}"
+
+# Проверка версии Docker Compose
+- name: Check Docker Compose version
+  command: docker-compose --version
+  register: compose_version
+  changed_when: false
+
+- name: Print Docker Compose version
+  debug:
+    msg: "{{ compose_version.stdout }}"
