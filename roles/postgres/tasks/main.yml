@@ -1,31 +1,44 @@
 ---
-- name: Install PostgreSQL (Debian/Ubuntu)
+# Installing PostgreSQL
+- name: Install PostgreSQL on Debian/Ubuntu
   apt:
-    name: postgresql
+    name: "postgresql-{{ postgres_version }}"
     state: present
     update_cache: true
   when: ansible_os_family == "Debian"
 
-- name: Install PostgreSQL (RHEL/CentOS)
+- name: Install PostgreSQL on RHEL/CentOS
   yum:
-    name: postgresql-server
+    name: "postgresql{{ postgres_version }}-server"
     state: present
   when: ansible_os_family == "RedHat"
 
-- name: Ensure PostgreSQL service is started and enabled
-  service:
-    name: postgresql
-    state: started
-    enabled: true
+# Initializing the database on RHEL/CentOS
+- name: Initialize PostgreSQL database (RHEL/CentOS)
+  command: "/usr/pgsql-{{ postgres_version }}/bin/postgresql-{{ postgres_version }}-setup initdb"
+  args:
+    creates: "/var/lib/pgsql/{{ postgres_version }}/data/postgresql.conf"
+  when: ansible_os_family == "RedHat"
 
+# Configuration
 - name: Deploy PostgreSQL config
   template:
     src: postgresql.conf.j2
-    dest: /etc/postgresql/{{ postgres_version }}/main/postgresql.conf
+    dest: >-
+      {{ '/etc/postgresql/' + postgres_version|string + '/main/postgresql.conf'
+         if ansible_os_family == 'Debian'
+         else '/var/lib/pgsql/' + postgres_version|string + '/data/postgresql.conf' }}
     mode: "0644"
   notify: Restart PostgreSQL
-  when: ansible_os_family == "Debian"
 
+# Launch and autorun
+- name: Ensure PostgreSQL service is started and enabled
+  service:
+    name: "{{ 'postgresql' if ansible_os_family == 'Debian' else 'postgresql-' + postgres_version|string }}"
+    state: started
+    enabled: true
+
+# Creating a user
 - name: Ensure PostgreSQL user exists
   become_user: postgres
   postgresql_user:
@@ -33,6 +46,7 @@
     password: "{{ postgres_password }}"
     state: present
 
+# Creating a database
 - name: Ensure PostgreSQL database exists
   become_user: postgres
   postgresql_db:

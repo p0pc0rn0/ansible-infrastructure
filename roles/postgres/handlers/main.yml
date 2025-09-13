@@ -1,5 +1,5 @@
 ---
 - name: Restart PostgreSQL
   service:
-    name: postgresql
+    name: "{{ 'postgresql' if ansible_os_family == 'Debian' else 'postgresql-' + postgres_version|string }}"
     state: restarted
