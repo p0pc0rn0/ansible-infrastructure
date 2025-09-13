@@ -1,0 +1,42 @@
+---
+- name: Install PostgreSQL (Debian/Ubuntu)
+  apt:
+    name: postgresql
+    state: present
+    update_cache: true
+  when: ansible_os_family == "Debian"
+
+- name: Install PostgreSQL (RHEL/CentOS)
+  yum:
+    name: postgresql-server
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Ensure PostgreSQL service is started and enabled
+  service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Deploy PostgreSQL config
+  template:
+    src: postgresql.conf.j2
+    dest: /etc/postgresql/{{ postgres_version }}/main/postgresql.conf
+    mode: "0644"
+  notify: Restart PostgreSQL
+  when: ansible_os_family == "Debian"
+
+- name: Ensure PostgreSQL user exists
+  become_user: postgres
+  postgresql_user:
+    name: "{{ postgres_user }}"
+    password: "{{ postgres_password }}"
+    state: present
+
+- name: Ensure PostgreSQL database exists
+  become_user: postgres
+  postgresql_db:
+    name: "{{ postgres_db }}"
+    owner: "{{ postgres_user }}"
+    encoding: "UTF8"
+    state: present
