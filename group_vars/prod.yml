@@ -2,3 +2,21 @@ nginx_port: 80
 postgres_db: prod_db
 postgres_user: prod_user
 postgres_password: "{{ vault_postgres_password }}"
+
+# Grafana
+grafana_admin_user: "admin"
+grafana_admin_password: "##################"
+
+# Alertmanager SMTP
+alert_email: "alerts@example.com"
+smtp_server: "smtp.example.com:587"
+smtp_user: "monitoring@example.com"
+smtp_password: "##################"
+
+# Slack/Telegram (если используем интеграции)
+slack_webhook_url: "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+telegram_bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+telegram_chat_id: "##################"
+
+# Дополнительно
+prometheus_retention: "30d"   # хранение метрик

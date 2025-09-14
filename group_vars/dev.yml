@@ -2,3 +2,9 @@ nginx_port: 8080
 postgres_db: dev_db
 postgres_user: dev_user
 postgres_password: dev_pass
+grafana_admin_password: "dev1234"
+alert_email: "alerts-dev@example.com"
+smtp_server: "smtp-dev.example.com:1025"
+smtp_user: "test"
+smtp_password: "##################"
+prometheus_retention: "7d"
