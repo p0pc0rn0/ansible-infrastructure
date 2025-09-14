@@ -1,0 +1,36 @@
+---
+- name: Ensure Docker is installed
+  package:
+    name: docker.io
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Copy application files
+  copy:
+    src: app/
+    dest: /opt/app/
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Build Docker image
+  community.docker.docker_image:
+    name: sample_app
+    build:
+      path: /opt/app
+    source: build
+
+- name: Run application container
+  community.docker.docker_container:
+    name: sample_app
+    image: sample_app
+    state: started
+    restart_policy: always
+    ports:
+      - "5000:5000"
+
+- name: Deploy Nginx reverse proxy config
+  template:
+    src: nginx-app.conf.j2
+    dest: /etc/nginx/conf.d/app.conf
+  notify: Restart nginx

@@ -1,0 +1,6 @@
+---
+- name: Deploy sample application
+  hosts: webservers
+  become: true
+  roles:
+    - app

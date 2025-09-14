@@ -7,3 +7,4 @@ postgres_version: 14
 postgres_user: popcorn
 postgres_password: "{{ vault_postgres_password }}"
 postgres_db: testdb
+nginx_app_server_name: myapp.test.com
