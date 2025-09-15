@@ -1,41 +1,67 @@
 ---
-- name: Install backup tools
-  ansible.builtin.package:
-    name:
-      - postgresql-client
-      - mysql-client
-      - rsync
-    state: present
-
-- name: Create backup directory
-  ansible.builtin.file:
+- name: Ensure backup directory exists
+  file:
     path: "{{ backup_dir }}"
     state: directory
-    owner: root
-    group: root
     mode: '0750'
 
-- name: Deploy backup script
-  ansible.builtin.template:
-    src: backup.sh.j2
-    dest: /usr/local/bin/backup.sh
-    owner: root
-    group: root
-    mode: '0750'
+- name: PostgreSQL backup
+  command: >
+    pg_dump -U {{ postgres_user }} {{ postgres_db }}
+    -F c -f {{ backup_dir }}/postgres_{{ ansible_date_time.date }}.dump
+  environment:
+    PGPASSWORD: "{{ postgres_password }}"
+  register: pg_backup
+  ignore_errors: true
 
-- name: Deploy systemd service
-  ansible.builtin.template:
+- name: MySQL backup
+  command: >
+    mysqldump -u {{ mysql_user }} -p{{ mysql_password }}
+    {{ mysql_db }} > {{ backup_dir }}/mysql_{{ ansible_date_time.date }}.sql
+  register: mysql_backup
+  ignore_errors: true
+
+- name: Rsync files to remote server
+  command: >
+    rsync -az {{ files_to_backup }}
+    {{ backup_remote_user }}@{{ backup_remote_host }}:{{ backup_remote_path }}/
+  register: rsync_backup
+  ignore_errors: true
+
+- name: Calculate backup size
+  command: du -sb {{ backup_dir }}
+  register: backup_size
+
+- name: Write backup metrics for node_exporter
+  copy:
+    dest: /var/lib/node_exporter/textfile_collector/backup.prom
+    content: |
+      backup_last_success{job="postgres"} {{ ansible_date_time.epoch if pg_backup.rc == 0 else 0 }}
+      backup_last_success{job="mysql"} {{ ansible_date_time.epoch if mysql_backup.rc == 0 else 0 }}
+      backup_last_success{job="rsync"} {{ ansible_date_time.epoch if rsync_backup.rc == 0 else 0 }}
+      backup_size_bytes{job="all"} {{ backup_size.stdout.split()[0] | default(0) }}
+
+- name: Deploy systemd service for backup timer (control node)
+  template:
     src: backup.service.j2
-    dest: /etc/systemd/system/backup.service
+    dest: /etc/systemd/system/ansible-backup.service
+    mode: '0644'
+  delegate_to: localhost
 
-- name: Deploy systemd timer
-  ansible.builtin.template:
+- name: Deploy systemd timer (control node)
+  template:
     src: backup.timer.j2
-    dest: /etc/systemd/system/backup.timer
+    dest: /etc/systemd/system/ansible-backup.timer
+    mode: '0644'
+  delegate_to: localhost
 
-- name: Enable and start timer
-  ansible.builtin.systemd:
-    name: backup.timer
+- name: Reload systemd (control node)
+  command: systemctl daemon-reload
+  delegate_to: localhost
+
+- name: Enable and start backup timer (control node)
+  systemd:
+    name: ansible-backup.timer
     enabled: true
     state: started
-    daemon_reload: true
+  delegate_to: localhost
