@@ -1,0 +1,9 @@
+---
+- name: Configure backups
+  hosts: db_servers
+  become: true
+  vars_files:
+    - "../group_vars/{{ env }}.yml"
+
+  roles:
+    - backups

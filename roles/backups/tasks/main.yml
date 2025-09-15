@@ -1,0 +1,41 @@
+---
+- name: Install backup tools
+  ansible.builtin.package:
+    name:
+      - postgresql-client
+      - mysql-client
+      - rsync
+    state: present
+
+- name: Create backup directory
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Deploy backup script
+  ansible.builtin.template:
+    src: backup.sh.j2
+    dest: /usr/local/bin/backup.sh
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Deploy systemd service
+  ansible.builtin.template:
+    src: backup.service.j2
+    dest: /etc/systemd/system/backup.service
+
+- name: Deploy systemd timer
+  ansible.builtin.template:
+    src: backup.timer.j2
+    dest: /etc/systemd/system/backup.timer
+
+- name: Enable and start timer
+  ansible.builtin.systemd:
+    name: backup.timer
+    enabled: true
+    state: started
+    daemon_reload: true

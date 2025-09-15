@@ -2,6 +2,12 @@ nginx_port: 80
 postgres_db: prod_db
 postgres_user: prod_user
 postgres_password: "{{ vault_postgres_password }}"
+backup_dir: "/data/backups"
+backup_remote_user: "backupuser"
+backup_remote_host: "10.0.0.100"
+backup_remote_path: "/mnt/backups/prod"
+backup_retention_days: 7
+files_to_backup: "/etc /var/www /home"
 
 # Grafana
 grafana_admin_user: "admin"

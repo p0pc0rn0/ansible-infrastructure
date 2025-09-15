@@ -1,0 +1,25 @@
+#!/bin/bash
+set -euo pipefail
+
+DATE=$(date +'%Y-%m-%d_%H-%M')
+BACKUP_DIR="{{ backup_dir }}/$DATE"
+mkdir -p "$BACKUP_DIR"
+
+# PostgreSQL backup
+if command -v pg_dump >/dev/null; then
+  PGPASSWORD="{{ postgres_password }}" pg_dump -U {{ postgres_user }} -h {{ postgres_host }} {{ postgres_db }} > "$BACKUP_DIR/postgres.sql"
+fi
+
+# MySQL backup
+if command -v mysqldump >/dev/null; then
+  mysqldump -u{{ mysql_user }} -p{{ mysql_password }} -h {{ mysql_host }} {{ mysql_db }} > "$BACKUP_DIR/mysql.sql"
+fi
+
+# File backup
+rsync -a {{ files_to_backup }} "$BACKUP_DIR/files/"
+
+# Sync to remote server
+rsync -az "$BACKUP_DIR" {{ backup_remote_user }}@{{ backup_remote_host }}:{{ backup_remote_path }}/
+
+# Cleanup old backups (local)
+find {{ backup_dir }} -maxdepth 1 -type d -mtime +{{ backup_retention_days }} -exec rm -rf {} \;
