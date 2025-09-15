@@ -1,0 +1,49 @@
+---
+- name: Ensure apt proxy config is set
+  copy:
+    dest: /etc/apt/apt.conf.d/95proxies
+    content: |
+      Acquire::http::Proxy "{{ http_proxy }}";
+      Acquire::https::Proxy "{{ https_proxy }}";
+  when: http_proxy is defined and https_proxy is defined
+  notify: Update apt cache
+
+- name: Configure global proxy for all users
+  copy:
+    dest: /etc/profile.d/proxy.sh
+    mode: '0644'
+    content: |
+      export http_proxy="{{ http_proxy }}"
+      export https_proxy="{{ https_proxy }}"
+      export no_proxy="{{ no_proxy }}"
+  when: http_proxy is defined
+
+- name: Configure proxy for wget
+  copy:
+    dest: /etc/wgetrc
+    mode: '0644'
+    content: |
+      use_proxy = on
+      http_proxy = {{ http_proxy }}
+      https_proxy = {{ https_proxy }}
+      no_proxy = {{ no_proxy }}
+  when: http_proxy is defined
+
+- name: Configure proxy for curl
+  copy:
+    dest: /etc/curlrc
+    mode: '0644'
+    content: |
+      proxy = "{{ http_proxy }}"
+  when: http_proxy is defined
+
+- name: Apply environment for current session
+  lineinfile:
+    path: /etc/environment
+    regexp: '^{{ item.key }}='
+    line: '{{ item.key }}="{{ item.value }}"'
+  with_items:
+    - { key: "http_proxy", value: "{{ http_proxy }}" }
+    - { key: "https_proxy", value: "{{ https_proxy }}" }
+    - { key: "no_proxy", value: "{{ no_proxy }}" }
+  when: http_proxy is defined

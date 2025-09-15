@@ -1,0 +1,8 @@
+---
+- name: Configure proxy on servers
+  hosts: all
+  become: true
+  vars_files:
+    - "../group_vars/prod.yml"
+  roles:
+    - proxy

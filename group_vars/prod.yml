@@ -35,6 +35,9 @@ telegram_chat_id: "{{ telegram_chat_id }}"
 
 # Дополнительно
 prometheus_retention: "30d"   # хранение метрик
+http_proxy: "http://proxy.example.com:3128"
+https_proxy: "http://proxy.example.com:3128"
+no_proxy: "localhost,127.0.0.1,.example.com"
 
 # Секреты (vault)
 vault_postgres_password: "###############"
