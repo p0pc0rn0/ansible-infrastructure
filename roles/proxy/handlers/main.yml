@@ -2,3 +2,9 @@
 - name: Update apt cache
   apt:
     update_cache: yes
+
+- name: Restart docker
+  systemd:
+    name: docker
+    state: restarted
+    daemon_reload: yes

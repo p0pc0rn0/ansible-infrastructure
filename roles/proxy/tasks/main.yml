@@ -47,3 +47,22 @@
     - { key: "https_proxy", value: "{{ https_proxy }}" }
     - { key: "no_proxy", value: "{{ no_proxy }}" }
   when: http_proxy is defined
+
+- name: Ensure docker systemd drop-in directory exists
+  file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    mode: '0755'
+  when: http_proxy is defined
+
+- name: Configure Docker proxy
+  copy:
+    dest: /etc/systemd/system/docker.service.d/proxy.conf
+    mode: '0644'
+    content: |
+      [Service]
+      Environment="HTTP_PROXY={{ http_proxy }}"
+      Environment="HTTPS_PROXY={{ https_proxy }}"
+      Environment="NO_PROXY={{ no_proxy }}"
+  when: http_proxy is defined
+  notify: Restart docker
