@@ -1,6 +1,28 @@
 ---
-- name: Install Docker
+- name: Install and validate Docker runtime
   hosts: docker_hosts
   become: true
-  roles:
+  gather_facts: true
+  serial: 2
+  tags:
     - docker
+
+  roles:
+    - role: docker
+      tags: [docker]
+
+  post_tasks:
+    - name: Validate Docker daemon is running
+      command: docker info
+      register: docker_info
+      changed_when: false
+      retries: 3
+      delay: 5
+      until: docker_info.rc == 0
+      tags: [docker, verify]
+
+    - name: Report Docker server version
+      debug:
+        msg: "Docker info summary on {{ inventory_hostname }} executed successfully"
+      when: docker_info is defined
+      tags: [docker, verify]

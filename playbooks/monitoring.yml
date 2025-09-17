@@ -6,7 +6,7 @@
   serial: 1
 
   pre_tasks:
-    - name: Ensure Docker dependencies are present
+    - name: Ensure Docker role prerequisites are applied
       import_role:
         name: docker
       tags: [docker]
@@ -20,9 +20,10 @@
     - name: Install Docker SDK for Python
       pip:
         name:
-          - docker
-          - docker-compose
+          - "docker>=6.1.0"
+          - "docker-compose>=1.29.0"
         state: present
+        executable: pip3
       tags: [docker]
 
   roles:
@@ -30,6 +31,17 @@
       tags: [monitoring]
 
   post_tasks:
+    - name: Wait for Prometheus readiness probe
+      uri:
+        url: http://localhost:9090/-/ready
+        status_code: 200
+        validate_certs: false
+      register: prometheus_ready
+      retries: 10
+      delay: 6
+      until: prometheus_ready.status == 200
+      tags: [monitoring, verification]
+
     - name: Wait for Grafana API to respond
       uri:
         url: http://localhost:3000/api/health
@@ -39,7 +51,22 @@
       retries: 10
       delay: 12
       until: grafana_health.status == 200
-      tags: [verification]
+      tags: [monitoring, verification]
+
+    - name: Fetch Prometheus active targets
+      uri:
+        url: http://localhost:9090/api/v1/targets
+        status_code: 200
+        validate_certs: false
+      register: prometheus_targets
+      tags: [monitoring, verification]
+
+    - name: Verify node-exporter target is up
+      assert:
+        that:
+          - prometheus_targets.json.data.activeTargets | selectattr('labels.job', 'equalto', 'node') | selectattr('health', 'equalto', 'up') | list | length > 0
+        fail_msg: "node-exporter target is not reporting 'up' in Prometheus"
+      tags: [monitoring, verification]
 
     - name: Show monitoring endpoints
       debug:
@@ -47,4 +74,4 @@
           - "Prometheus: http://{{ ansible_default_ipv4.address | default('localhost') }}:9090"
           - "Grafana: http://{{ ansible_default_ipv4.address | default('localhost') }}:3000"
           - "Alertmanager: http://{{ ansible_default_ipv4.address | default('localhost') }}:9093"
-      tags: [verification]
+      tags: [monitoring, verification]

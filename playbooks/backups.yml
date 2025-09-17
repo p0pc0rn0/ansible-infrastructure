@@ -1,9 +1,35 @@
 ---
-- name: Configure backups
-  hosts: db_servers
+- name: Configure backup routines on database tier
+  hosts: db_hosts
   become: true
+  gather_facts: true
+  serial: 1
+  tags:
+    - backups
+    - db
+  vars:
+    env_name: "{{ env | default('prod') }}"
   vars_files:
-    - "../group_vars/{{ env }}.yml"
+    - "../group_vars/{{ env_name }}.yml"
+
+  pre_tasks:
+    - name: Assert backup directory variable is defined
+      assert:
+        that:
+          - backup_dir is defined
+        fail_msg: "backup_dir must be defined in group_vars/{{ env_name }}.yml"
+      tags: [backups]
 
   roles:
-    - backups
+    - role: backups
+      tags: [backups]
+
+  post_tasks:
+    - name: Summarize backup results
+      debug:
+        msg:
+          - "PostgreSQL backup rc: {{ pg_backup.rc | default('n/a') }}"
+          - "MySQL backup rc: {{ mysql_backup.rc | default('n/a') }}"
+          - "Rsync backup rc: {{ rsync_backup.rc | default('n/a') }}"
+      when: pg_backup is defined or mysql_backup is defined or rsync_backup is defined
+      tags: [backups, verify]

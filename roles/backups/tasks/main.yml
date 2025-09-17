@@ -47,6 +47,7 @@
     dest: /etc/systemd/system/ansible-backup.service
     mode: '0644'
   delegate_to: localhost
+  run_once: true
 
 - name: Deploy systemd timer (control node)
   template:
@@ -54,10 +55,12 @@
     dest: /etc/systemd/system/ansible-backup.timer
     mode: '0644'
   delegate_to: localhost
+  run_once: true
 
 - name: Reload systemd (control node)
   command: systemctl daemon-reload
   delegate_to: localhost
+  run_once: true
 
 - name: Enable and start backup timer (control node)
   systemd:
@@ -65,3 +68,4 @@
     enabled: true
     state: started
   delegate_to: localhost
+  run_once: true

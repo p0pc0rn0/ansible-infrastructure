@@ -1,9 +1,7 @@
 ---
-- name: Configure full infrastructure
-  hosts: all
-  become: true
-  roles:
-    - docker
-    - nginx
-    - postgres
-    - monitoring
+- import_playbook: docker.yml
+- import_playbook: proxy.yml
+- import_playbook: postgres.yml
+- import_playbook: app.yml
+- import_playbook: monitoring.yml
+- import_playbook: backups.yml

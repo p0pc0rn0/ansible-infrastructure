@@ -1,6 +1,30 @@
 ---
-- name: Configure Nginx
+- name: Configure Nginx reverse proxy tier
   hosts: webservers
   become: true
+  gather_facts: true
+  serial: 1
+  tags:
+    - nginx
+
   roles:
     - role: nginx
+      tags: [nginx]
+
+  post_tasks:
+    - name: Validate Nginx service is reachable
+      uri:
+        url: "http://{{ hostvars[inventory_hostname].ansible_host | default(inventory_hostname) }}:{{ nginx_port }}"
+        status_code: 200
+        validate_certs: false
+      register: nginx_health
+      retries: 5
+      delay: 5
+      until: nginx_health.status == 200
+      tags: [nginx, verify]
+
+    - name: Show Nginx validation result
+      debug:
+        msg: "Nginx responded with status {{ nginx_health.status }} on {{ inventory_hostname }}"
+      when: nginx_health is defined
+      tags: [nginx, verify]

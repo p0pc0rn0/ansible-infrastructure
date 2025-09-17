@@ -1,8 +1,47 @@
 ---
-- name: Configure proxy on servers
+- name: Configure outbound proxy settings
   hosts: all
   become: true
-  vars_files:
-    - "../group_vars/prod.yml"
-  roles:
+  gather_facts: true
+  tags:
     - proxy
+  vars:
+    proxy_env: "{{ env | default('prod') }}"
+  vars_files:
+    - "../group_vars/{{ proxy_env }}.yml"
+
+  pre_tasks:
+    - name: Ensure proxy variables are provided
+      assert:
+        that:
+          - http_proxy is defined
+          - https_proxy is defined
+          - no_proxy is defined
+        fail_msg: "Proxy variables must be defined in group_vars/{{ proxy_env }}.yml or passed via --extra-vars"
+      tags: [proxy]
+
+  roles:
+    - role: proxy
+      tags: [proxy]
+
+  post_tasks:
+    - name: Check if proxy profile script exists
+      stat:
+        path: /etc/profile.d/proxy.sh
+      register: proxy_profile
+      tags: [proxy, verify]
+
+    - name: Confirm proxy environment exported
+      shell: "source /etc/profile.d/proxy.sh && echo $http_proxy"
+      args:
+        executable: /bin/bash
+      register: proxy_env_check
+      changed_when: false
+      when: ansible_os_family in ['Debian', 'RedHat'] and http_proxy is defined and proxy_profile.stat.exists
+      tags: [proxy, verify]
+
+    - name: Show proxy check result
+      debug:
+        msg: "Proxy configured on {{ inventory_hostname }}: {{ proxy_env_check.stdout | default('not set') }}"
+      when: proxy_env_check is defined
+      tags: [proxy, verify]

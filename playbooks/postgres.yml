@@ -1,6 +1,50 @@
 ---
-- name: Configure PostgreSQL
-  hosts: dbservers
+- name: Configure PostgreSQL cluster
+  hosts: db_hosts
   become: true
-  roles:
+  gather_facts: true
+  serial: 1
+  tags:
     - postgres
+    - db
+
+  pre_tasks:
+    - name: Ensure Python dependency for PostgreSQL modules is present
+      package:
+        name: python3-psycopg2
+        state: present
+      tags: [postgres, db]
+
+    - name: Tune kernel parameters for PostgreSQL
+      sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: true
+      loop:
+        - name: kernel.shmmax
+          value: "{{ ((ansible_memtotal_mb | default(2048)) * 1024 * 1024 * 0.5) | int }}"
+        - name: kernel.shmall
+          value: "{{ ((ansible_memtotal_mb | default(2048)) * 1024 * 0.5) | int }}"
+      tags: [postgres, tuning]
+      when: ansible_os_family in ['Debian', 'RedHat']
+
+  roles:
+    - role: postgres
+      tags: [postgres, db]
+
+  post_tasks:
+    - name: Validate PostgreSQL responds to queries
+      become_user: postgres
+      command: psql -d {{ postgres_db }} -c 'SELECT 1;'
+      register: postgres_health
+      retries: 5
+      delay: 5
+      until: postgres_health.rc == 0
+      tags: [postgres, verify]
+
+    - name: Display PostgreSQL connection result
+      debug:
+        msg: "PostgreSQL health check rc={{ postgres_health.rc }} on {{ inventory_hostname }}"
+      when: postgres_health is defined
+      tags: [postgres, verify]

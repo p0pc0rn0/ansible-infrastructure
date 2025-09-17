@@ -1,6 +1,56 @@
 ---
-- name: Deploy sample application
+- name: Deploy sample application stack
   hosts: webservers
   become: true
-  roles:
+  gather_facts: true
+  serial: 1
+  tags:
     - app
+
+  pre_tasks:
+    - name: Ensure container runtime prerequisites
+      import_role:
+        name: docker
+      tags: [docker]
+
+    - name: Install Python packages required for Docker modules
+      package:
+        name: python3-pip
+        state: present
+      tags: [docker]
+
+    - name: Install Docker SDK for Python on target host
+      pip:
+        name:
+          - "docker>=6.1.0"
+          - "docker-compose>=1.29.0"
+        state: present
+        executable: pip3
+      tags: [docker]
+
+  roles:
+    - role: nginx
+      tags: [nginx]
+    - role: app
+      tags: [app]
+
+  post_tasks:
+    - name: Verify application container is running
+      community.docker.docker_container_info:
+        name: sample_app
+      register: sample_app_info
+      retries: 5
+      delay: 4
+      until: sample_app_info.containers | length > 0
+      tags: [app, verify]
+
+    - name: Check application HTTP endpoint through Nginx
+      uri:
+        url: "http://{{ hostvars[inventory_hostname].ansible_host | default(inventory_hostname) }}:{{ nginx_port }}"
+        status_code: 200
+        validate_certs: false
+      register: app_http_check
+      retries: 5
+      delay: 6
+      until: app_http_check.status == 200
+      tags: [app, verify]
