@@ -1,0 +1,18 @@
+---
+- name: Ensure auditd package is installed
+  package:
+    name: auditd
+    state: present
+
+- name: Deploy auditd baseline rules
+  copy:
+    dest: /etc/audit/rules.d/hardening.rules
+    content: "{{ harden_auditd_rules }}\n"
+    mode: "0640"
+  notify: Restart auditd
+
+- name: Ensure auditd service enabled
+  systemd:
+    name: auditd
+    enabled: true
+    state: started

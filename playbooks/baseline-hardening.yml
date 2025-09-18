@@ -1,0 +1,21 @@
+---
+- name: Apply baseline hardening
+  hosts: all
+  become: true
+  gather_facts: true
+  serial: 10
+  vars:
+    harden_admin_users:
+      - { name: devops }
+  roles:
+    - role: baseline_hardening
+      tags: [baseline, security]
+
+  post_tasks:
+    - name: Display baseline compliance summary
+      debug:
+        msg:
+          - "Baseline hardening applied to {{ ansible_hostname }}"
+          - "Admin group: {{ harden_admin_group }}"
+          - "Firewall enabled: {{ harden_enable_ufw }}"
+          - "Auditd enabled: {{ harden_enable_auditd }}"

@@ -1,0 +1,11 @@
+[DEFAULT]
+ignoreip = 127.0.0.1/8 ::1
+bantime  = {{ harden_fail2ban_bantime }}
+findtime = {{ harden_fail2ban_findtime }}
+maxretry = {{ harden_fail2ban_maxretry }}
+backend  = systemd
+
+[sshd]
+enabled  = true
+port     = ssh
+logpath  = %(sshd_log)s

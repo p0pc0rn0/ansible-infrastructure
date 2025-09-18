@@ -1,0 +1,31 @@
+---
+harden_admin_group: devops
+harden_admin_users: []
+harden_ssh_banner: "Authorized access only. All actions may be monitored."
+harden_security_packages:
+  - sudo
+  - chrony
+  - gnupg
+  - curl
+harden_enable_auditd: true
+harden_enable_fail2ban: true
+harden_enable_ufw: true
+harden_fail2ban_bantime: 600
+harden_fail2ban_findtime: 600
+harden_fail2ban_maxretry: 5
+harden_unattended_config: |
+  Unattended-Upgrade::Origins-Pattern {
+        "origin=Debian,codename=${distro_codename},label=Debian";
+        "origin=Debian,codename=${distro_codename}-security,label=Debian-Security";
+  };
+  Unattended-Upgrade::Automatic-Reboot "true";
+  Unattended-Upgrade::Automatic-Reboot-Time "03:30";
+harden_auditd_rules: |
+  -w /etc/passwd -p wa -k identity
+  -w /etc/group -p wa -k identity
+  -w /etc/shadow -p wa -k identity
+  -w /var/log/auth.log -p wa -k authlog
+  -w /var/log/secure -p wa -k authlog
+harden_ufw_allow_ports:
+  - 22
+harden_ufw_logging: 'on'

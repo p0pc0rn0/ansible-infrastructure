@@ -1,0 +1,31 @@
+---
+- name: Ensure ufw installed
+  package:
+    name: ufw
+    state: present
+
+- name: Reset ufw rules
+  ufw:
+    state: reset
+
+- name: Default deny incoming
+  ufw:
+    direction: incoming
+    policy: deny
+
+- name: Default allow outgoing
+  ufw:
+    direction: outgoing
+    policy: allow
+
+- name: Allow baseline allowed ports
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ harden_ufw_allow_ports }}"
+
+- name: Enable ufw firewall
+  ufw:
+    state: enabled
+    logging: "{{ harden_ufw_logging }}"

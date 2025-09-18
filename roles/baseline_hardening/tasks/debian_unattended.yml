@@ -1,0 +1,19 @@
+---
+- name: Ensure unattended-upgrades is installed
+  package:
+    name:
+      - unattended-upgrades
+      - apt-listchanges
+    state: present
+
+- name: Configure unattended-upgrades
+  copy:
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    content: "{{ harden_unattended_config }}\n"
+    mode: "0644"
+
+- name: Enable unattended-upgrades service
+  systemd:
+    name: unattended-upgrades
+    enabled: true
+    state: started

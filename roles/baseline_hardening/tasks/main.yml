@@ -1,0 +1,75 @@
+---
+- name: Ensure admin group exists
+  group:
+    name: "{{ harden_admin_group }}"
+    state: present
+
+- name: Ensure admin users exist
+  user:
+    name: "{{ item.name }}"
+    groups: "{{ harden_admin_group }}"
+    append: true
+    shell: /bin/bash
+    state: present
+    create_home: true
+  loop: "{{ harden_admin_users }}"
+  when: harden_admin_users | length > 0
+
+- name: Configure sudoers for admin group
+  copy:
+    dest: /etc/sudoers.d/99-admin-group
+    content: "%{{ harden_admin_group }} ALL=(ALL) NOPASSWD:ALL\n"
+    mode: "0440"
+    owner: root
+    group: root
+
+- name: Harden SSH daemon config
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }} {{ item.value }}"
+    state: present
+    create: false
+    backrefs: false
+  loop:
+    - { key: 'PermitRootLogin', value: 'no' }
+    - { key: 'PasswordAuthentication', value: 'no' }
+    - { key: 'ClientAliveInterval', value: '300' }
+    - { key: 'ClientAliveCountMax', value: '2' }
+  notify: Restart sshd
+
+- name: Ensure SSH banner is configured
+  copy:
+    dest: /etc/issue.net
+    content: "{{ harden_ssh_banner }}\n"
+    mode: "0644"
+  when: harden_ssh_banner | length > 0
+
+- name: Enable SSH banner option
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^Banner'
+    line: 'Banner /etc/issue.net'
+  when: harden_ssh_banner | length > 0
+  notify: Restart sshd
+
+- name: Install security baseline packages
+  package:
+    name: "{{ harden_security_packages }}"
+    state: present
+
+- name: Enable and configure unattended upgrades (Debian)
+  include_tasks: debian_unattended.yml
+  when: ansible_os_family == 'Debian'
+
+- name: Configure auditd baseline
+  include_tasks: auditd.yml
+  when: harden_enable_auditd
+
+- name: Configure fail2ban jail
+  include_tasks: fail2ban.yml
+  when: harden_enable_fail2ban
+
+- name: Configure UFW baseline
+  include_tasks: ufw.yml
+  when: ansible_os_family == 'Debian' and harden_enable_ufw
