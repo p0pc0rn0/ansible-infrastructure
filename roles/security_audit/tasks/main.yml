@@ -1,0 +1,120 @@
+---
+- name: Ensure security audit packages are installed (Debian/Ubuntu)
+  apt:
+    name:
+      - openscap-scanner
+      - scap-security-guide
+      - lynis
+    state: present
+    update_cache: true
+  when: ansible_os_family == 'Debian'
+
+- name: Ensure security audit packages are installed (RedHat/CentOS)
+  yum:
+    name:
+      - openscap-scanner
+      - scap-security-guide
+      - lynis
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Create directory for audit reports
+  file:
+    path: "{{ security_audit_output_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Remove audit reports older than retention period
+  find:
+    paths: "{{ security_audit_output_dir }}"
+    patterns: "*"
+    age: "{{ security_audit_max_report_age_days }}d"
+  register: old_reports
+
+- name: Clean old audit reports
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_reports.files }}"
+  when: old_reports.matched | default(0) > 0
+
+- name: Set audit run timestamp
+  set_fact:
+    security_audit_timestamp: "{{ ansible_date_time.iso8601_basic }}"
+
+- name: Check if OpenSCAP datastream exists
+  stat:
+    path: "{{ security_audit_oscap_datastream }}"
+  register: oscap_ds
+  when: security_audit_run_oscap
+
+- name: Run OpenSCAP scan
+  command: >-
+    oscap xccdf eval --profile {{ security_audit_oscap_profile }}
+    --results {{ security_audit_output_dir }}/oscap-results-{{ security_audit_timestamp }}.xml
+    --report {{ security_audit_output_dir }}/oscap-report-{{ security_audit_timestamp }}.html
+    {{ security_audit_oscap_datastream }}
+  register: oscap_result
+  changed_when: true
+  failed_when: oscap_result.rc not in [0,2]
+  when:
+    - security_audit_run_oscap
+    - oscap_ds.stat.exists | default(false)
+
+- name: Record OpenSCAP artefact paths
+  set_fact:
+    security_audit_oscap_report: "{{ security_audit_output_dir }}/oscap-report-{{ security_audit_timestamp }}.html"
+    security_audit_oscap_results: "{{ security_audit_output_dir }}/oscap-results-{{ security_audit_timestamp }}.xml"
+  when:
+    - security_audit_run_oscap
+    - oscap_ds.stat.exists | default(false)
+
+- name: Warn when OpenSCAP datastream missing
+  debug:
+    msg: "OpenSCAP datastream {{ security_audit_oscap_datastream }} not found; skipping scan"
+  when:
+    - security_audit_run_oscap
+    - oscap_ds.stat.exists is defined
+    - not oscap_ds.stat.exists
+
+- name: Run Lynis audit
+  command: >-
+    lynis audit system --profile {{ security_audit_lynis_profile }}
+    --quiet
+    --logfile {{ security_audit_output_dir }}/lynis-{{ security_audit_timestamp }}.log
+    --report-file {{ security_audit_output_dir }}/lynis-report-{{ security_audit_timestamp }}.dat
+  register: lynis_result
+  changed_when: true
+  when: security_audit_run_lynis
+
+- name: Record Lynis artefact paths
+  set_fact:
+    security_audit_lynis_log: "{{ security_audit_output_dir }}/lynis-{{ security_audit_timestamp }}.log"
+    security_audit_lynis_report: "{{ security_audit_output_dir }}/lynis-report-{{ security_audit_timestamp }}.dat"
+  when: security_audit_run_lynis
+
+- name: Initialize audit summary
+  set_fact:
+    security_audit_summary: {}
+  when: security_audit_summary is not defined
+
+- name: Append OpenSCAP artefacts to summary
+  set_fact:
+    security_audit_summary: "{{ security_audit_summary | combine({'oscap_report': security_audit_oscap_report, 'oscap_results': security_audit_oscap_results}) }}"
+  when: security_audit_oscap_report is defined and security_audit_oscap_results is defined
+
+- name: Append Lynis artefacts to summary
+  set_fact:
+    security_audit_summary: "{{ security_audit_summary | combine({'lynis_log': security_audit_lynis_log, 'lynis_report': security_audit_lynis_report}) }}"
+  when: security_audit_lynis_log is defined and security_audit_lynis_report is defined
+
+- name: Display audit summary
+  debug:
+    msg:
+      - "OpenSCAP report: {{ security_audit_summary.oscap_report | default('skipped') }}"
+      - "OpenSCAP results: {{ security_audit_summary.oscap_results | default('skipped') }}"
+      - "Lynis log: {{ security_audit_summary.lynis_log | default('skipped') }}"
+      - "Lynis report: {{ security_audit_summary.lynis_report | default('skipped') }}"
+  when: security_audit_summary is defined

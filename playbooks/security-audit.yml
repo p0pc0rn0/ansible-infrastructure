@@ -1,0 +1,27 @@
+---
+- name: Run security compliance audits
+  hosts: all
+  become: true
+  gather_facts: true
+  serial: 5
+  tags:
+    - security
+    - audit
+
+  roles:
+    - role: security_audit
+      tags: [security, audit]
+
+  post_tasks:
+    - name: Summarize audit artefacts on control node
+      run_once: true
+      delegate_to: localhost
+      vars:
+        host_reports: |-
+          {% for host in ansible_play_batch %}
+          - host: {{ host }}
+            oscap_report: {{ hostvars[host].security_audit_summary.oscap_report | default('skipped') }}
+            lynis_report: {{ hostvars[host].security_audit_summary.lynis_report | default('skipped') }}
+          {% endfor %}
+      debug:
+        msg: "Security audit outputs:\n{{ host_reports }}"

@@ -1,0 +1,8 @@
+---
+security_audit_output_dir: /var/reports/security
+security_audit_run_oscap: true
+security_audit_run_lynis: true
+security_audit_oscap_profile: xccdf_org.ssgproject.content_profile_standard
+security_audit_oscap_datastream: "/usr/share/xml/scap/ssg/content/ssg-{{ ansible_distribution | lower }}{{ ansible_distribution_major_version }}-ds.xml"
+security_audit_lynis_profile: server
+security_audit_max_report_age_days: 30
