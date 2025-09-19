@@ -1,5 +1,5 @@
 server {
-    listen 80;
+    listen {{ nginx_port | default(80) }};
     server_name {{ nginx_app_server_name | default("app.local") }};
 
     location / {

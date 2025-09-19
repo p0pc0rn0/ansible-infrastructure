@@ -12,26 +12,106 @@
     update_cache: yes
 
 # Добавление GPG-ключа Docker
+- name: Determine Docker apt install strategy
+  set_fact:
+    docker_apt_codename: "{{ 'jammy' if ansible_lsb.codename == 'noble' else ansible_lsb.codename }}"
+    docker_use_official_repo: "{{ ansible_lsb.codename not in ['noble'] }}"
+  when: ansible_os_family == 'Debian'
+
 - name: Add Docker GPG apt Key
   apt_key:
     url: https://download.docker.com/linux/ubuntu/gpg
     state: present
+  when:
+    - ansible_os_family == 'Debian'
+    - docker_use_official_repo | default(false)
 
 # Добавление репозитория Docker
 - name: Add Docker Repository
   apt_repository:
-    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ docker_apt_codename | default(ansible_lsb.codename) }} stable"
     state: present
+  when:
+    - ansible_os_family == 'Debian'
+    - docker_use_official_repo | default(false)
 
-# Установка Docker Engine
-- name: Install Docker Engine
+- block:
+    - name: Install Docker Engine (Docker CE)
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        update_cache: yes
+  rescue:
+    - name: Install Docker Engine (Ubuntu packages)
+      apt:
+        name:
+          - docker.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+  when:
+    - ansible_os_family == 'Debian'
+    - docker_use_official_repo | default(false)
+
+- name: Install Docker Engine (Ubuntu packages - native)
   apt:
     name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
+      - docker.io
     state: present
     update_cache: yes
+  when:
+    - ansible_os_family == 'Debian'
+    - not docker_use_official_repo | default(false)
+
+- name: Install Docker Compose plugin (Debian/Ubuntu)
+  apt:
+    name: docker-compose-plugin
+    state: present
+  when:
+    - ansible_os_family == 'Debian'
+    - docker_use_official_repo | default(false)
+
+# Установка Docker Compose plugin для RedHat/CentOS
+- name: Install Docker Compose plugin (RHEL/CentOS)
+  yum:
+    name: docker-compose-plugin
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Determine docker compose binary architecture
+  set_fact:
+    docker_compose_arch: "{{ 'x86_64' if ansible_architecture in ['x86_64', 'amd64'] else ansible_architecture }}"
+
+- name: Fetch latest Docker Compose release metadata
+  uri:
+    url: https://api.github.com/repos/docker/compose/releases/latest
+    return_content: yes
+  register: compose_release
+  check_mode: no
+
+- name: Set docker compose version fact
+  set_fact:
+    docker_compose_version: "{{ compose_release.json.tag_name }}"
+  when: compose_release.json is defined
+
+- name: Ensure Docker CLI plugins directory exists
+  file:
+    path: /usr/lib/docker/cli-plugins
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download Docker Compose CLI plugin binary
+  get_url:
+    url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-linux-{{ docker_compose_arch }}"
+    dest: /usr/lib/docker/cli-plugins/docker-compose
+    mode: "0755"
+  when: docker_compose_version is defined
+  check_mode: no
 
 # Включение и запуск systemd-сервиса
 - name: Enable and start Docker service
@@ -39,23 +119,6 @@
     name: docker
     enabled: true
     state: started
-
-# Установка Docker Compose (последняя версия)
-- name: Get latest Docker Compose version
-  uri:
-    url: https://api.github.com/repos/docker/compose/releases/latest
-    return_content: yes
-  register: compose_release
-
-- name: Set docker-compose version fact
-  set_fact:
-    docker_compose_version: "{{ compose_release.json.tag_name }}"
-
-- name: Download Docker Compose binary
-  get_url:
-    url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-{{ ansible_system | lower }}-{{ ansible_architecture }}"
-    dest: /usr/local/bin/docker-compose
-    mode: '0755'
 
 # Проверка версии Docker
 - name: Check Docker version
@@ -67,12 +130,11 @@
   debug:
     msg: "{{ docker_version.stdout }}"
 
-# Проверка версии Docker Compose
-- name: Check Docker Compose version
-  command: docker-compose --version
+- name: Check Docker Compose plugin version
+  command: docker compose version
   register: compose_version
   changed_when: false
 
-- name: Print Docker Compose version
+- name: Print Docker Compose plugin version
   debug:
     msg: "{{ compose_version.stdout }}"

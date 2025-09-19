@@ -11,19 +11,23 @@
         name: docker
       tags: [docker]
 
-    - name: Install Python packages for Docker SDK
-      package:
-        name: python3-pip
+    - name: Install Python Docker SDK packages (Debian)
+      apt:
+        name:
+          - python3-docker
+          - python3-yaml
         state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
       tags: [docker]
 
-    - name: Install Docker SDK for Python
-      pip:
+    - name: Install Python Docker SDK packages (RedHat)
+      yum:
         name:
-          - "docker>=6.1.0"
-          - "docker-compose>=1.29.0"
+          - python3-docker
+          - python3-PyYAML
         state: present
-        executable: pip3
+      when: ansible_os_family == 'RedHat'
       tags: [docker]
 
   roles:
@@ -59,13 +63,15 @@
         status_code: 200
         validate_certs: false
       register: prometheus_targets
+      retries: 5
+      delay: 6
+      until: prometheus_targets.json.data.activeTargets | selectattr('labels.job', 'equalto', 'node') | selectattr('health', 'equalto', 'up') | list | length > 0
       tags: [monitoring, verification]
 
     - name: Verify node-exporter target is up
-      assert:
-        that:
-          - prometheus_targets.json.data.activeTargets | selectattr('labels.job', 'equalto', 'node') | selectattr('health', 'equalto', 'up') | list | length > 0
-        fail_msg: "node-exporter target is not reporting 'up' in Prometheus"
+      debug:
+        msg: "node-exporter target reported 'up' in Prometheus"
+      when: prometheus_targets.json.data.activeTargets | selectattr('labels.job', 'equalto', 'node') | selectattr('health', 'equalto', 'up') | list | length > 0
       tags: [monitoring, verification]
 
     - name: Show monitoring endpoints

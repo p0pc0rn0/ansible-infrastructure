@@ -29,3 +29,4 @@
   ufw:
     state: enabled
     logging: "{{ harden_ufw_logging }}"
+  when: not ansible_check_mode

@@ -13,19 +13,23 @@
         name: docker
       tags: [docker]
 
-    - name: Install Python packages required for Docker modules
-      package:
-        name: python3-pip
+    - name: Install Python Docker SDK packages (Debian)
+      apt:
+        name:
+          - python3-docker
+          - python3-yaml
         state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
       tags: [docker]
 
-    - name: Install Docker SDK for Python on target host
-      pip:
+    - name: Install Python Docker SDK packages (RedHat)
+      yum:
         name:
-          - "docker>=6.1.0"
-          - "docker-compose>=1.29.0"
+          - python3-docker
+          - python3-PyYAML
         state: present
-        executable: pip3
+      when: ansible_os_family == 'RedHat'
       tags: [docker]
 
   roles:
@@ -41,7 +45,7 @@
       register: sample_app_info
       retries: 5
       delay: 4
-      until: sample_app_info.containers | length > 0
+      until: sample_app_info.exists | default(false)
       tags: [app, verify]
 
     - name: Check application HTTP endpoint through Nginx

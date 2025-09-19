@@ -9,10 +9,14 @@
   service:
     name: auditd
     state: restarted
-  when: ansible_service_mgr == 'systemd'
+  when:
+    - ansible_service_mgr == 'systemd'
+    - not ansible_check_mode | default(false)
 
 - name: Restart fail2ban
   service:
     name: fail2ban
     state: restarted
-  when: ansible_service_mgr == 'systemd'
+  when:
+    - ansible_service_mgr == 'systemd'
+    - not ansible_check_mode | default(false)

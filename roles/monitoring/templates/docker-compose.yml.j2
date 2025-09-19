@@ -14,12 +14,12 @@ services:
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
-    network_mode: host
-    pid: host
     volumes:
       - "/:/host:ro,rslave"
     command:
       - "--path.rootfs=/host"
+    ports:
+      - "9100:9100"
 
   grafana:
     image: grafana/grafana:latest

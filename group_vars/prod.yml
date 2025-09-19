@@ -20,18 +20,18 @@ files_to_backup: "/etc /var/www /home"
 
 # Grafana
 grafana_admin_user: "admin"
-grafana_admin_password: "{{ grafana_admin_password }}"
+grafana_admin_password: "{{ vault_grafana_admin_password }}"
 
 # Alertmanager SMTP
 alert_email: "alerts@example.com"
 smtp_server: "smtp.example.com:587"
 smtp_user: "monitoring@example.com"
-smtp_password: "{{ smtp_password }}"
+smtp_password: "{{ vault_smtp_password }}"
 
 # Slack/Telegram (если используем интеграции)
 slack_webhook_url: "https://hooks.slack.com/services/XXX/YYY/ZZZ"
 telegram_bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-telegram_chat_id: "{{ telegram_chat_id }}"
+telegram_chat_id: "{{ vault_telegram_chat_id }}"
 
 # Дополнительно
 prometheus_retention: "30d"   # хранение метрик
@@ -42,6 +42,6 @@ no_proxy: "localhost,127.0.0.1,.example.com"
 # Секреты (vault)
 vault_postgres_password: "###############"
 vault_mysql_password: "################"
-telegram_chat_id: "################"
-smtp_password: "################"
-grafana_admin_password: "################"
+vault_telegram_chat_id: "################"
+vault_smtp_password: "################"
+vault_grafana_admin_password: "################"
