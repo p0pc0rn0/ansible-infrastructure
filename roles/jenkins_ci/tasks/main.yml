@@ -6,7 +6,7 @@
       - ca-certificates
       - curl
       - git
-      - {{ jenkins_java_package_debian }}
+      - "{{ jenkins_java_package_debian }}"
     state: present
     update_cache: true
   when: ansible_os_family == 'Debian'
@@ -35,7 +35,7 @@
     name:
       - curl
       - git
-      - {{ jenkins_java_package_redhat }}
+      - "{{ jenkins_java_package_redhat }}"
     state: present
   when: ansible_os_family == 'RedHat'
 
@@ -68,8 +68,8 @@
   wait_for:
     host: 127.0.0.1
     port: "{{ jenkins_http_port }}"
-    delay: {{ jenkins_wait_for_start_delay }}
-    timeout: {{ (jenkins_wait_for_start_retries | int) * (jenkins_wait_for_start_delay | int) }}
+    delay: "{{ jenkins_wait_for_start_delay }}"
+    timeout: "{{ (jenkins_wait_for_start_retries | int) * (jenkins_wait_for_start_delay | int) }}"
 
 - name: Ensure init.groovy.d directory exists
   file:
