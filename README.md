@@ -4,13 +4,14 @@ Automation kit for showcasing DevOps skills with Ansible. Репозиторий
 
 ## Структура
 - `playbooks/` — сценарии развёртывания по сервисам и средам
-- `roles/` — переиспользуемые роли (baseline_hardening, security_audit, docker, postgres, nginx, app, backups, monitoring, proxy)
+- `roles/` — переиспользуемые роли (baseline_hardening, security_audit, jenkins_ci, docker, postgres, nginx, app, backups, monitoring, proxy)
 - `group_vars/` и `inventories/` — переменные и хостовые группы для dev/stage/prod
 
 ## Плейбуки
-- `playbooks/site.yml` — единая оркестрация, последовательно импортирует сервисные плейбуки (baseline → docker → proxy → postgres → app → monitoring → backups)
+- `playbooks/site.yml` — единая оркестрация, последовательно импортирует сервисные плейбуки (baseline → docker → proxy → postgres → app → monitoring → cicd-jenkins → backups)
 - `playbooks/baseline-hardening.yml` — применяет CIS-базис: пользователи, sudo, SSH, unattended-upgrades, auditd, fail2ban, UFW
 - `playbooks/security-audit.yml` — пост-базовый аудит: запускает OpenSCAP и Lynis, собирает отчёты в `/var/reports/security`
+- `playbooks/cicd-jenkins.yml` — поднимает Jenkins: репо/ключи, Java, service, Groovy-инициализация админа и pipeline (docker build + pytest)
 - `playbooks/docker.yml` — установка Docker Engine/Compose и проверка демона
 - `playbooks/postgres.yml` — конфигурация PostgreSQL с автотюнингом sysctl и проверкой подключения
 - `playbooks/nginx.yml` — настройка реверс-прокси и HTTP health-check
@@ -32,6 +33,9 @@ ansible-playbook -i inventories/dev/hosts.ini playbooks/monitoring.yml --check
 
 # Запустить аудит безопасности и собрать отчёты
 ansible-playbook -i inventories/dev/hosts.ini playbooks/security-audit.yml
+
+# Развернуть Jenkins и демо-пайплайн
+ansible-playbook -i inventories/dev/hosts.ini playbooks/cicd-jenkins.yml -e jenkins_pipeline_repo_url=https://github.com/your/repo
 
 # Развернуть прод инфраструктуру целиком
 ansible-playbook -i inventories/prod/hosts.ini playbooks/site.yml

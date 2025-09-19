@@ -1,0 +1,23 @@
+import jenkins.model.*
+import hudson.security.*
+
+Jenkins jenkins = Jenkins.get()
+String username = "{{ jenkins_admin_user }}"
+String password = "{{ jenkins_admin_password }}"
+
+def currentRealm = jenkins.getSecurityRealm()
+if (!(currentRealm instanceof HudsonPrivateSecurityRealm)) {
+    currentRealm = new HudsonPrivateSecurityRealm(false)
+    jenkins.setSecurityRealm(currentRealm)
+}
+
+def user = currentRealm.getAllUsers().find { it.id == username }
+if (user == null) {
+    currentRealm.createAccount(username, password)
+    jenkins.save()
+}
+
+def strategy = new FullControlOnceLoggedInAuthorizationStrategy()
+strategy.setAllowAnonymousRead(false)
+jenkins.setAuthorizationStrategy(strategy)
+jenkins.save()

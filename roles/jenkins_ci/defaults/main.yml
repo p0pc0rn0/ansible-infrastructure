@@ -1,0 +1,19 @@
+---
+jenkins_repo_key_url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+jenkins_repo_deb: deb https://pkg.jenkins.io/debian-stable binary/
+jenkins_repo_rpm_url: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+jenkins_admin_user: admin
+jenkins_admin_password: admin123
+jenkins_http_port: 8080
+jenkins_pipeline_name: sample-ci-pipeline
+jenkins_pipeline_repo_url: https://github.com/hashicorp/example
+jenkins_pipeline_repo_branch: main
+jenkins_cli_plugins:
+  - workflow-aggregator
+  - docker-workflow
+  - blueocean
+jenkins_java_package_debian: openjdk-11-jdk
+jenkins_java_package_redhat: java-11-openjdk
+jenkins_wait_for_start_retries: 12
+jenkins_wait_for_start_delay: 10
+jenkins_groovy_dir: /var/lib/jenkins/init.groovy.d

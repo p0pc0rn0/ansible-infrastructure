@@ -1,0 +1,29 @@
+---
+- name: Provision Jenkins CI server
+  hosts: cicd_hosts
+  become: true
+  gather_facts: true
+  serial: 1
+  tags:
+    - cicd
+    - jenkins
+
+  pre_tasks:
+    - name: Ensure Docker runtime available for pipeline builds
+      import_role:
+        name: docker
+      tags: [docker]
+
+  roles:
+    - role: jenkins_ci
+      tags: [cicd, jenkins]
+
+  post_tasks:
+    - name: Display Jenkins initial credentials
+      debug:
+        msg:
+          - "Jenkins URL: http://{{ hostvars[inventory_hostname].ansible_host | default(inventory_hostname) }}:{{ jenkins_http_port }}"
+          - "Admin login: {{ jenkins_admin_user }}"
+          - "Pipeline job: {{ jenkins_pipeline_name }}"
+          - "Pipeline repo: {{ jenkins_pipeline_repo_url }} (branch {{ jenkins_pipeline_repo_branch }})"
+      tags: [cicd, info]

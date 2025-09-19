@@ -1,0 +1,113 @@
+---
+- name: Install Jenkins prerequisites (Debian)
+  apt:
+    name:
+      - gnupg2
+      - ca-certificates
+      - curl
+      - git
+      - {{ jenkins_java_package_debian }}
+    state: present
+    update_cache: true
+  when: ansible_os_family == 'Debian'
+
+- name: Add Jenkins apt repository key
+  apt_key:
+    url: "{{ jenkins_repo_key_url }}"
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Add Jenkins apt repository
+  apt_repository:
+    repo: "{{ jenkins_repo_deb }}"
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Install Jenkins (Debian)
+  apt:
+    name: jenkins
+    state: present
+    update_cache: true
+  when: ansible_os_family == 'Debian'
+
+- name: Install Jenkins prerequisites (RedHat)
+  yum:
+    name:
+      - curl
+      - git
+      - {{ jenkins_java_package_redhat }}
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Add Jenkins yum repository
+  get_url:
+    url: "{{ jenkins_repo_rpm_url }}"
+    dest: /etc/yum.repos.d/jenkins.repo
+    mode: "0644"
+  when: ansible_os_family == 'RedHat'
+
+- name: Import Jenkins repo key (RedHat)
+  rpm_key:
+    state: present
+    key: https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+  when: ansible_os_family == 'RedHat'
+
+- name: Install Jenkins (RedHat)
+  yum:
+    name: jenkins
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Ensure Jenkins service enabled and started
+  systemd:
+    name: jenkins
+    enabled: true
+    state: started
+
+- name: Wait for Jenkins to start listening
+  wait_for:
+    host: 127.0.0.1
+    port: "{{ jenkins_http_port }}"
+    delay: {{ jenkins_wait_for_start_delay }}
+    timeout: {{ (jenkins_wait_for_start_retries | int) * (jenkins_wait_for_start_delay | int) }}
+
+- name: Ensure init.groovy.d directory exists
+  file:
+    path: "{{ jenkins_groovy_dir }}"
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: "0755"
+
+- name: Deploy admin bootstrap Groovy script
+  template:
+    src: init_admin.groovy.j2
+    dest: "{{ jenkins_groovy_dir }}/01-bootstrap-admin.groovy"
+    owner: jenkins
+    group: jenkins
+    mode: "0640"
+  notify: Restart Jenkins
+
+- name: Deploy pipeline bootstrap Groovy script
+  template:
+    src: init_pipeline.groovy.j2
+    dest: "{{ jenkins_groovy_dir }}/02-bootstrap-pipeline.groovy"
+    owner: jenkins
+    group: jenkins
+    mode: "0640"
+  notify: Restart Jenkins
+
+- name: Ensure Jenkins plugins installed
+  command: >-
+    jenkins-plugin-cli --plugins {{ jenkins_cli_plugins | join(' ') }}
+  register: plugin_install
+  changed_when: false
+  environment:
+    JAVA_HOME: "{{ '/usr/lib/jvm/java-11-openjdk-amd64' if ansible_os_family == 'Debian' else '/usr/lib/jvm/java-11-openjdk' }}"
+
+- name: Display Jenkins access information
+  debug:
+    msg:
+      - "Jenkins URL: http://{{ ansible_default_ipv4.address | default(inventory_hostname) }}:{{ jenkins_http_port }}"
+      - "Admin user: {{ jenkins_admin_user }}"
+      - "Pipeline job: {{ jenkins_pipeline_name }}"
