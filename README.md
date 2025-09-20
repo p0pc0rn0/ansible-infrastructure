@@ -22,7 +22,7 @@ Automation kit for showcasing DevOps skills with Ansible. Репозиторий
 
 ## Быстрый старт
 ```bash
-# Проверить инвентори
+# Проверить инвентори файлы 
 tree inventories/
 
 # Применить baseline-hardening в тестовом режиме
