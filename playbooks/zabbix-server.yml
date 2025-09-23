@@ -1,0 +1,38 @@
+---
+- name: Install and configure Zabbix server
+  hosts: zabbix_server_hosts
+  become: true
+  gather_facts: true
+  serial: 1
+
+  pre_tasks:
+    - name: Ensure Zabbix repository prerequisites are present (Debian)
+      apt:
+        name:
+          - gnupg
+          - ca-certificates
+          - apt-transport-https
+        state: present
+        update_cache: true
+      when: ansible_os_family == 'Debian'
+
+    - name: Import Zabbix repository key (Debian)
+      apt_key:
+        url: https://repo.zabbix.com/zabbix-official-repo.key
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Configure Zabbix repository (Debian)
+      apt_repository:
+        repo: "deb [arch=amd64] https://repo.zabbix.com/zabbix/{{ zabbix_server_version }}/ubuntu {{ ansible_lsb.codename }} main"
+        state: present
+      when: ansible_os_family == 'Debian'
+
+  roles:
+    - role: zabbix_server
+      tags: [zabbix, server]
+
+  post_tasks:
+    - name: Show Zabbix frontend URL
+      debug:
+        msg: "Zabbix frontend available at http://{{ ansible_default_ipv4.address | default(ansible_host) }}/zabbix"

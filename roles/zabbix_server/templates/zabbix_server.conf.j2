@@ -1,0 +1,10 @@
+### Managed by Ansible
+LogFile=/var/log/zabbix/zabbix_server.log
+DBName={{ zabbix_server_db_name }}
+DBUser={{ zabbix_server_db_user }}
+DBPassword={{ zabbix_server_db_password }}
+ListenIP={{ zabbix_server_listen_ip }}
+CacheSize=256M
+HistoryCacheSize=128M
+TrendCacheSize=64M
+Timeout=4

@@ -1,0 +1,44 @@
+---
+- name: Fail if unsupported distribution
+  fail:
+    msg: "Currently only Debian/Ubuntu family is implemented in this role"
+  when: ansible_os_family not in ['Debian']
+
+- name: Ensure dependencies present (Debian)
+  apt:
+    name:
+      - gnupg
+      - ca-certificates
+    state: present
+    update_cache: yes
+
+- name: Import Zabbix GPG key (Debian)
+  apt_key:
+    url: "https://repo.zabbix.com/zabbix-official-repo.key"
+    state: present
+
+- name: Add Zabbix repository (Debian/Ubuntu)
+  apt_repository:
+    repo: "deb [arch=amd64] https://repo.zabbix.com/zabbix/{{ zabbix_agent_version }}/ubuntu {{ ansible_lsb.codename }} main"
+    state: present
+
+- name: Install Zabbix agent package
+  apt:
+    name: zabbix-agent
+    state: present
+    update_cache: yes
+
+- name: Deploy zabbix_agentd.conf
+  template:
+    src: zabbix_agentd.conf.j2
+    dest: /etc/zabbix/zabbix_agentd.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart zabbix agent
+
+- name: Ensure Zabbix agent service enabled
+  service:
+    name: zabbix-agent
+    state: started
+    enabled: true

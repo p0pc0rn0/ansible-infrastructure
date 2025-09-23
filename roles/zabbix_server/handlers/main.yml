@@ -1,0 +1,16 @@
+---
+- name: Restart zabbix server
+  service:
+    name: zabbix-server
+    state: restarted
+
+- name: Reload nginx
+  service:
+    name: nginx
+    state: reloaded
+
+- name: Reload php-fpm
+  service:
+    name: "{{ zabbix_php_fpm_service | default('php-fpm') }}"
+    state: restarted
+  when: zabbix_php_fpm_service is defined

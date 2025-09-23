@@ -1,0 +1,11 @@
+---
+zabbix_server_version: "6.4"
+zabbix_server_db_name: zabbix
+zabbix_server_db_user: zabbix
+zabbix_server_db_password: "{{ vault_zabbix_db_password | default('zabbix') }}"
+zabbix_server_listen_ip: 0.0.0.0
+zabbix_php_timezone: "Europe/Moscow"
+zabbix_frontend_listen_port: 80
+zabbix_frontend_server_name: "zabbix.local"
+zabbix_php_upload_max_filesize: 16M
+zabbix_php_post_max_size: 16M

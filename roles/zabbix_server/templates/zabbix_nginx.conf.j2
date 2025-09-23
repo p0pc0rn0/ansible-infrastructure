@@ -1,0 +1,26 @@
+# Managed by Ansible
+server {
+    listen {{ zabbix_frontend_listen_port }};
+    server_name {{ zabbix_frontend_server_name }};
+
+    root /usr/share/zabbix;
+    index index.php;
+
+    access_log /var/log/nginx/zabbix-access.log;
+    error_log  /var/log/nginx/zabbix-error.log;
+
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ [^/]+\.php$ {
+        fastcgi_pass unix:{{ zabbix_php_fpm_socket }};
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(ht|git) {
+        deny all;
+    }
+}
