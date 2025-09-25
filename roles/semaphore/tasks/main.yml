@@ -1,0 +1,51 @@
+---
+- name: Ensure only Debian/Ubuntu supported
+  fail:
+    msg: "Semaphore role currently supports Debian/Ubuntu"
+  when: ansible_os_family not in ['Debian']
+
+- name: Ensure directories for Semaphore stack exist
+  file:
+    path: "{{ semaphore_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install Python Docker SDK packages (Debian/Ubuntu)
+  apt:
+    name:
+      - python3-docker
+      - python3-yaml
+    state: present
+    update_cache: yes
+
+- name: Template docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ semaphore_compose_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Deploy Semaphore stack via Docker Compose v2
+  community.docker.docker_compose_v2:
+    project_src: "{{ semaphore_install_dir }}"
+    state: present
+    recreate: always
+
+- name: Wait for Semaphore UI to respond
+  uri:
+    url: "http://localhost:{{ semaphore_port }}"
+    status_code: 200
+  register: semaphore_ui
+  retries: 15
+  delay: 4
+  until: semaphore_ui.status == 200
+
+- name: Show Semaphore credentials
+  debug:
+    msg:
+      - "Semaphore URL: {{ semaphore_external_url }}"
+      - "Admin user: {{ semaphore_admin_email }}"
+      - "Admin password: {{ semaphore_admin_password }}"

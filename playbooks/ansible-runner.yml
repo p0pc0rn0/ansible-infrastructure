@@ -1,0 +1,24 @@
+---
+- name: Provision Ansible automation UI (Semaphore)
+  hosts: automation_hosts
+  become: true
+  gather_facts: true
+  serial: 1
+
+  pre_tasks:
+    - name: Ensure Docker engine present
+      import_role:
+        name: docker
+      tags: [docker]
+
+  roles:
+    - role: semaphore
+      tags: [automation, semaphore]
+
+  post_tasks:
+    - name: Demonstrate running example playbook via Semaphore API hint
+      debug:
+        msg:
+          - "Open {{ semaphore_external_url }} "
+          - "Login with admin credentials to create your first project"
+          - "Upload repo with playbooks and trigger runs from the UI"

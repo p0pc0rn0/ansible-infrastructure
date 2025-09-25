@@ -1,0 +1,15 @@
+---
+semaphore_install_dir: /opt/semaphore
+semaphore_compose_file: "{{ semaphore_install_dir }}/docker-compose.yml"
+semaphore_version: "latest"
+semaphore_port: 3000
+semaphore_admin_user: admin
+semaphore_admin_email: admin@example.com
+semaphore_admin_password: "{{ vault_semaphore_admin_password | default('ChangeMe123!') }}"
+semaphore_db_user: semaphore
+semaphore_db_password: "{{ vault_semaphore_db_password | default('SemaphoreDBPass123!') }}"
+semaphore_db_name: semaphore
+semaphore_db_port: 5432
+semaphore_external_url: "http://{{ ansible_default_ipv4.address | default(ansible_host) }}:{{ semaphore_port }}"
+semaphore_timezone: "Europe/Moscow"
+semaphore_access_key_encryption: "{{ vault_semaphore_access_key | default('ChangeMeKey123!') }}"

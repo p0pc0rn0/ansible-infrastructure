@@ -7,3 +7,8 @@ postgres_user: popcorn
 postgres_password: "{{ vault_postgres_password }}"
 postgres_db: testdb
 nginx_app_server_name: myapp.test.com
+semaphore_admin_email: "admin@company.com"
+semaphore_admin_password: "{{ vault_semaphore_admin_password }}"
+semaphore_db_password: "{{ vault_semaphore_db_password }}"
+semaphore_access_key_encryption: "{{ vault_semaphore_access_key }}"
+semaphore_port: 8081

@@ -45,3 +45,10 @@ vault_mysql_password: "################"
 vault_telegram_chat_id: "################"
 vault_smtp_password: "################"
 vault_grafana_admin_password: "################"
+
+#Semaphore
+semaphore_admin_email: "admin@company.com"
+semaphore_admin_password: "{{ vault_semaphore_admin_password }}"
+semaphore_db_password: "{{ vault_semaphore_db_password }}"
+semaphore_access_key_encryption: "{{ vault_semaphore_access_key }}"
+semaphore_port: 8081
