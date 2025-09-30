@@ -1,0 +1,9 @@
+---
+terraform_workdir: "{{ playbook_dir | realpath }}/../terraform"
+terraform_binary: terraform
+terraform_backend_config: {}
+terraform_variables: {}
+terraform_state_file: "terraform.tfstate"
+terraform_inventory_group: provisioned
+terraform_ansible_playbook: playbooks/site.yml
+terraform_ansible_extra_args: ""

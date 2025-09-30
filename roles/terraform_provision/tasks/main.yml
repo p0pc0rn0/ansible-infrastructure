@@ -1,0 +1,40 @@
+---
+- name: Ensure terraform binary is available
+  command: "{{ terraform_binary }} version"
+  register: terraform_version
+  changed_when: false
+
+- name: Initialize Terraform backend
+  community.general.terraform:
+    project_path: "{{ terraform_workdir }}"
+    state: present
+    force_init: true
+    init_vars: "{{ terraform_backend_config }}"
+  register: terraform_init
+
+- name: Apply Terraform configuration
+  community.general.terraform:
+    project_path: "{{ terraform_workdir }}"
+    state: present
+    variables: "{{ terraform_variables }}"
+  register: terraform_apply
+
+- name: Set provisioned hosts fact from Terraform outputs
+  set_fact:
+    terraform_hosts: "{{ terraform_apply.outputs.hosts.value | default([]) }}"
+
+- name: Add provisioned hosts to inventory
+  add_host:
+    name: "{{ item.name }}"
+    ansible_host: "{{ item.public_ip | default(item.private_ip) }}"
+    groups: "{{ item.groups | default([terraform_inventory_group]) | join(',') }}"
+    ansible_user: "{{ item.ansible_user | default('ubuntu') }}"
+  loop: "{{ terraform_hosts }}"
+
+- name: Run post-provision Ansible playbook
+  when: terraform_hosts | length > 0
+  ansible.builtin.command: >-
+    ansible-playbook -i localhost, {{ terraform_ansible_playbook }}
+    --limit "{{ terraform_hosts | map(attribute='name') | join(',') }}" {{ terraform_ansible_extra_args }}
+  async: 3600
+  poll: 10

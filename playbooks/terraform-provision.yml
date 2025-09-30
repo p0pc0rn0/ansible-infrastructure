@@ -1,0 +1,66 @@
+---
+- name: Provision infrastructure with Terraform and configure via Ansible
+  hosts: localhost
+  gather_facts: false
+  vars:
+    terraform_workdir: "{{ playbook_dir }}/../terraform"
+  tasks:
+    - name: Ensure terraform directory exists
+      file:
+        path: "{{ terraform_workdir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Initialize sample Terraform project if empty
+      copy:
+        dest: "{{ terraform_workdir }}/main.tf"
+        content: |
+          terraform {
+            required_version = ">= 1.0.0"
+            required_providers {
+              local = {
+                source  = "hashicorp/local"
+                version = "2.4.0"
+              }
+            }
+          }
+
+          resource "local_file" "example" {
+            filename = "${path.module}/provisioned_host.txt"
+            content  = "host=${var.host_name}"
+          }
+
+          output "hosts" {
+            value = [
+              {
+                name        = var.host_name
+                private_ip  = "127.0.0.1"
+                public_ip   = "127.0.0.1"
+                ansible_user = "{{ lookup('env', 'USER') | default('ubuntu') }}"
+                groups      = ["{{ terraform_inventory_group | default('provisioned') }}"]
+              }
+            ]
+          }
+
+          variable "host_name" {
+            type    = string
+            default = "local-demo"
+          }
+      when: not lookup('ansible.builtin.fileglob', terraform_workdir + '/main.tf', errors='ignore')
+
+    - name: Include Terraform provision role
+      import_role:
+        name: terraform_provision
+      vars:
+        terraform_workdir: "{{ terraform_workdir }}"
+        terraform_variables:
+          host_name: "tf-demo-{{ ansible_date_time.epoch }}"
+        terraform_ansible_playbook: playbooks/site.yml
+        terraform_ansible_extra_args: "--tags docker"
+
+    - name: Show provision result
+      debug:
+        msg:
+          - "Terraform workdir: {{ terraform_workdir }}"
+          - "Provisioned hosts: {{ hostvars.localhost.terraform_hosts | default([]) | map(attribute='name') | list }}"
+          - "Next steps: customize Terraform code under {{ terraform_workdir }}"
