@@ -1,0 +1,23 @@
+---
+- name: Deploy HashiCorp Vault in dev mode with demo secrets
+  hosts: vault_hosts
+  become: true
+  gather_facts: true
+  serial: 1
+
+  pre_tasks:
+    - name: Ensure Docker runtime is present
+      import_role:
+        name: docker
+      tags: [docker]
+
+  roles:
+    - role: vault
+      tags: [vault]
+
+  post_tasks:
+    - name: Remind how to retrieve secret via API
+      debug:
+        msg:
+          - "Example: curl -H 'X-Vault-Token: {{ vault_dev_root_token }}' {{ vault_addr }}/v1/{{ vault_kv_path }}/data/{{ vault_demo_secret_path }}"
+          - "Vault dev server stores secrets in memory; use for demos/testing, not production"

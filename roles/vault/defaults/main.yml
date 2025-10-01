@@ -1,0 +1,12 @@
+---
+vault_install_dir: /opt/vault
+vault_compose_file: "{{ vault_install_dir }}/docker-compose.yml"
+vault_version: "latest"
+vault_port: 8200
+vault_dev_root_token: "root-token"
+vault_dev_listener: "0.0.0.0"
+vault_kv_path: "secret"
+vault_demo_secret_path: "database/credentials"
+vault_demo_db_user: "app_user"
+vault_demo_db_password: "SuperSecretPass123!"
+vault_addr: "http://127.0.0.1:{{ vault_port }}"

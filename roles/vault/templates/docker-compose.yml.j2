@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  vault:
+    image: hashicorp/vault:{{ vault_version }}
+    container_name: vault
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: {{ vault_dev_root_token }}
+      VAULT_DEV_LISTEN_ADDRESS: {{ vault_dev_listener }}:{{ vault_port }}
+    volumes:
+      - vault-data:/vault/file
+    ports:
+      - "{{ vault_port }}:{{ vault_port }}"
+
+volumes:
+  vault-data:

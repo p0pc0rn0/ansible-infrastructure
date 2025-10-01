@@ -1,0 +1,85 @@
+---
+- name: Ensure role runs on Debian family
+  fail:
+    msg: "Vault role currently supports Debian/Ubuntu hosts"
+  when: ansible_os_family not in ['Debian']
+
+- name: Ensure Vault install directory exists
+  file:
+    path: "{{ vault_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install Python Docker SDK packages
+  apt:
+    name:
+      - python3-docker
+      - python3-yaml
+    state: present
+    update_cache: yes
+
+- name: Template Vault docker-compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ vault_compose_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Launch Vault dev stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ vault_install_dir }}"
+    state: present
+    recreate: always
+
+- name: Wait for Vault API to respond
+  uri:
+    url: "{{ vault_addr }}/v1/sys/health"
+    method: GET
+    status_code: [200, 429]
+    validate_certs: false
+  register: vault_health
+  retries: 15
+  delay: 4
+  until: vault_health.status in [200, 429]
+
+- name: Enable KV engine (version 2)
+  uri:
+    url: "{{ vault_addr }}/v1/sys/mounts/{{ vault_kv_path }}"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_dev_root_token }}"
+    body:
+      type: kv
+      options:
+        version: 2
+    body_format: json
+    status_code: [200, 204, 400]
+    validate_certs: false
+  register: enable_kv
+  changed_when: enable_kv.status in [200, 204]
+  failed_when: enable_kv.status not in [200, 204, 400] and enable_kv.json is defined and ('path is already in use' not in (enable_kv.json.errors | default([]) | join(' ')))
+
+- name: Write demo database credentials secret
+  uri:
+    url: "{{ vault_addr }}/v1/{{ vault_kv_path }}/data/{{ vault_demo_secret_path }}"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_dev_root_token }}"
+    body:
+      data:
+        username: "{{ vault_demo_db_user }}"
+        password: "{{ vault_demo_db_password }}"
+    body_format: json
+    status_code: 200
+    validate_certs: false
+  register: vault_secret
+
+- name: Display Vault access information
+  debug:
+    msg:
+      - "Vault UI/API: {{ vault_addr }}"
+      - "Root token: {{ vault_dev_root_token }}"
+      - "KV path: {{ vault_kv_path }}/data/{{ vault_demo_secret_path }}"
