@@ -1,0 +1,12 @@
+---
+elasticsearch_version: "8.15.0"
+elasticsearch_heap_size: "1g"
+elasticsearch_port: 9200
+kibana_port: 5601
+elk_install_dir: /opt/elk
+elk_compose_file: "{{ elk_install_dir }}/docker-compose.yml"
+elk_network: elk-net
+elk_test_index: "demo-index"
+elk_test_document:
+  message: "Hello from Ansible"
+  environment: "dev"

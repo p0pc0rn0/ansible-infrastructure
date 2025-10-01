@@ -1,0 +1,61 @@
+---
+- name: Ensure Debian/Ubuntu supported
+  fail:
+    msg: "ELK stack role currently supports Debian/Ubuntu hosts"
+  when: ansible_os_family not in ['Debian']
+
+- name: Ensure ELK install directory exists
+  file:
+    path: "{{ elk_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install Python Docker SDK packages
+  apt:
+    name:
+      - python3-docker
+      - python3-yaml
+    state: present
+    update_cache: yes
+
+- name: Deploy docker-compose file for ELK
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ elk_compose_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Start ELK stack via docker compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ elk_install_dir }}"
+    state: present
+    recreate: always
+
+- name: Wait for Elasticsearch to become reachable
+  uri:
+    url: "http://localhost:{{ elasticsearch_port }}"
+    method: GET
+    status_code: 200
+  register: elastic_health
+  retries: 20
+  delay: 6
+  until: elastic_health.status == 200
+
+- name: Create test index with demo document
+  uri:
+    url: "http://localhost:{{ elasticsearch_port }}/{{ elk_test_index }}/_doc"
+    method: POST
+    body: "{{ elk_test_document | to_json }}"
+    body_format: json
+    status_code: [200, 201]
+  register: elk_index
+
+- name: Output Kibana URL and index status
+  debug:
+    msg:
+      - "Elasticsearch URL: http://{{ ansible_default_ipv4.address | default(ansible_host) }}:{{ elasticsearch_port }}"
+      - "Kibana URL: http://{{ ansible_default_ipv4.address | default(ansible_host) }}:{{ kibana_port }}"
+      - "Created index: {{ elk_test_index }} (result: {{ elk_index.json.result | default('n/a') }})"

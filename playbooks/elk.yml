@@ -1,0 +1,23 @@
+---
+- name: Deploy ELK stack (Elasticsearch + Kibana) with demo data
+  hosts: elk_hosts
+  become: true
+  gather_facts: true
+  serial: 1
+
+  pre_tasks:
+    - name: Ensure Docker runtime available
+      import_role:
+        name: docker
+      tags: [docker]
+
+  roles:
+    - role: elk_stack
+      tags: [elk]
+
+  post_tasks:
+    - name: Queried index example
+      debug:
+        msg:
+          - "Example query: curl -XGET 'http://{{ ansible_default_ipv4.address | default(ansible_host) }}:{{ elasticsearch_port }}/{{ elk_test_index }}/_search?pretty'"
+          - "Open Kibana at http://{{ ansible_default_ipv4.address | default(ansible_host) }}:{{ kibana_port }}"
