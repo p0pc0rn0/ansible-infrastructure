@@ -110,5 +110,4 @@ ansible-infrastructure/
 
 ## 👤 Автор
 👨‍💻 Руслан (DevOps/DevSecOps Engineer)
-📫 Контакт: [Telegram: @LogTailer
-             GitHub: https://github.com/p0pc0rn0]
+📫 Контакт: [@p0pc0rn0](https://github.com/p0pc0rn0)
